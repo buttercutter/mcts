@@ -9,4 +9,4 @@ TODO :
 
 3. Review the BAI-MCTS paper : [Monte-Carlo Tree Search by Best Arm Identification](https://arxiv.org/abs/1706.02986)
 
-Credit: Thanks to kind folks ([@crem](https://github.com/mooskagh) , [@Naphthalin](https://github.com/Naphthalin) , [@oscardssmith](oscardssmith)) from Leela-Zero community
+Credit: Thanks to kind folks ([@crem](https://github.com/mooskagh) , [@Naphthalin](https://github.com/Naphthalin) , [@oscardssmith](https://github.com/oscardssmith)) from Leela-Zero community
