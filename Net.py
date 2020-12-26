@@ -100,4 +100,4 @@ for epoch in range(num_epochs):
 print('Finished Training')
 
 PATH = './tictactoe_net.pth'
-torch.save(net.state_dict(), PATH)
+torch.save(net, PATH)
