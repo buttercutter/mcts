@@ -1,4 +1,5 @@
 import torch
+import torch.utils.data
 import torch.nn as nn
 import torch.optim as optim
 
@@ -74,8 +75,13 @@ class Net(nn.Module):
         return policy, value  # score, move
 
 
+USE_CUDA = torch.cuda.is_available()
+
+
 def train():
     net = Net()
+    if USE_CUDA:
+        net = net.cuda()
     print(net)
 
     params = list(net.parameters())
@@ -89,19 +95,26 @@ def train():
     # loss_function = nn.CrossEntropyLoss()
     loss_function = nn.MSELoss()
 
-    num_epochs = 100
+    num_epochs = 200
     for epoch in range(num_epochs):
         loss_ = 0
 
         # See https://github.com/bsamseth/tictacNET/issues/2
         # for a description of the inputs and output of the neural network
-        train_loader = list(zip(
-            torch.from_numpy(np.array(board_features_and_turn, dtype='float32')[:, np.newaxis]),
-            torch.from_numpy(np.array(moves, dtype='float32')[:, np.newaxis]),
-            torch.from_numpy(np.array(score, dtype='float32')[:, np.newaxis]),
-        ))
+        train_loader = zip(np.array(board_features_and_turn, dtype='float32'),
+                           np.array(moves, dtype='float32'),
+                           np.array(score, dtype='float32'))
+        train_loader = torch.utils.data.DataLoader(
+            list(train_loader),
+            batch_size=32,
+        )
 
         for _board_features_and_turn, move, _score in train_loader:
+            if USE_CUDA:
+                _board_features_and_turn = _board_features_and_turn.cuda()
+                move = move.cuda()
+                _score = _score.cuda()
+
             # Forward Pass
             policy_output, value_output = net(_board_features_and_turn)
             # Loss at each iteration by comparing to target(moves)
