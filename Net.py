@@ -72,7 +72,7 @@ class Net(nn.Module):
         policy = self.linears(x)
         value = self.linears2(x)
 
-        return policy, value  # score, move
+        return policy, value  # move, score
 
 
 USE_CUDA = torch.cuda.is_available()
