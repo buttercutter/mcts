@@ -80,14 +80,16 @@ def update_move(_next_move, _next_move_probabilities, _player_turn, _cross_posit
 
 
 def players_have_winning_patterns(_cross_positions, _nought_positions):
+    # needs to match every bits in the WINNING_PATTERNS
+    if any(
+            np.bitwise_and(win, int(_cross_positions, 2)) == win or
+            np.bitwise_and(win, int(_nought_positions, 2)) == win
+            for win in WINNING_PATTERNS
+    ):
+        return 1
 
-    for win in WINNING_PATTERNS:
-
-        # needs to match every bits in the WINNING_PATTERNS
-        if ((int(bin(win), 2) & int(_cross_positions, 2)) == (int(bin(win), 2))) or \
-           ((int(bin(win), 2) & int(_nought_positions, 2)) == (int(bin(win), 2))):
-            return 1
-    return 0
+    else:
+        return 0
 
 
 PATH = './tictactoe_net.pth'
