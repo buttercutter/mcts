@@ -95,7 +95,7 @@ def train():
     # loss_function = nn.CrossEntropyLoss()
     loss_function = nn.MSELoss()
 
-    num_epochs = 200
+    num_epochs = 100
     for epoch in range(num_epochs):
         loss_ = 0
 
@@ -106,7 +106,7 @@ def train():
                            np.array(score, dtype='float32'))
         train_loader = torch.utils.data.DataLoader(
             list(train_loader),
-            batch_size=32,
+            batch_size=4096,
         )
 
         for _board_features_and_turn, move, _score in train_loader:
