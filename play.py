@@ -8,10 +8,32 @@ import random
 from Net import Net
 
 
+CROSS, NOUGHT = 0, 1
+PLAYERS = [CROSS, NOUGHT]
+
+# Winning patterns encoded in bit patterns.
+# E.g. three in a row in the top row is
+#   448 = 0b111000000
+WINNING_PATTERNS = [448, 56, 7, 292, 146, 73, 273, 84]  # Row  # Columns  # Diagonals
+
+
+# initial game config
+TOTAL_NUM__OF_BOXES = 9  # 3x3 tic-tac-toe
+random_player_start_turn = random.randint(CROSS, NOUGHT)
+cross_positions = '000000000'
+nought_positions = '000000000'
+player_turn = random_player_start_turn
+model_input = cross_positions + nought_positions + str(player_turn)
+next_move = 99999999999999  # just for initialization
+next_move_probabilities = np.zeros(TOTAL_NUM__OF_BOXES)  # 9 boxes choice
+predicted_score = np.zeros(3)  # loss, draw, win
+out = [next_move_probabilities, predicted_score]
+
+
 def binary_to_string(input_binary):
     mask = 0b1
     output = ""
-    for i in range(9):
+    for i in range(TOTAL_NUM__OF_BOXES):
         if mask & input_binary:
             output += '1'
         else:
@@ -20,13 +42,53 @@ def binary_to_string(input_binary):
     return output[::-1]
 
 
-CROSS, NOUGHT = 0, 1
-PLAYERS = [CROSS, NOUGHT]
+def update_move(_next_move, _next_move_probabilities, _player_turn, _cross_positions, _nought_positions):
+    print("we will update the next_move accordingly inside this function")
 
-# Winning patterns encoded in bit patterns.
-# E.g. three in a row in the top row is
-#   448 = 0b111000000
-WINNING_PATTERNS = [448, 56, 7, 292, 146, 73, 273, 84]  # Row  # Columns  # Diagonals
+    _next_move = np.binary_repr(_next_move_probabilities.argmax())
+
+    # What if the square box (next_move) is already filled by the other player ?
+    # then we will have to go for the next less preferred next_move
+    # During actual project in later stage, we will use Monte-Carlo Tree Search
+    # instead of the following logic
+    cross_positions_str = binary_to_string(int(_cross_positions, 2))
+    nought_positions_str = binary_to_string(int(_nought_positions, 2))
+    _next_move_in_integer = int(_next_move, 2)
+
+    print("next_move in integer = ", _next_move_in_integer)
+    print("cross_positions_str = ", cross_positions_str)
+    print("nought_positions_str = ", nought_positions_str)
+
+    # if opponent player had filled the square box position
+    #    OR the same player had filled the same square box position
+    if ((_player_turn == CROSS) and (nought_positions_str[_next_move_in_integer] == '1')) or \
+       ((_player_turn == NOUGHT) and (cross_positions_str[_next_move_in_integer] == '1')) or \
+       ((_player_turn == CROSS) and (cross_positions_str[_next_move_in_integer] == '1')) or \
+       ((_player_turn == NOUGHT) and (nought_positions_str[_next_move_in_integer] == '1')):
+
+        print("going for second preferred next move")
+        print("next_move_probabilities = ", _next_move_probabilities)
+        _next_move_probabilities[0, _next_move_in_integer] = 0  # makes way for less preferred next_move
+        print("after setting certain bit to 0, next_move_probabilities = ", _next_move_probabilities)
+        _next_move = np.binary_repr(_next_move_probabilities.argmax())
+
+        # checks again whether this less preferred next_move had already been played before
+        _next_move = update_move(_next_move, _next_move_probabilities, _player_turn,
+                                 _cross_positions, _nought_positions)
+
+    return _next_move
+
+
+def players_have_winning_patterns(_cross_positions, _nought_positions):
+
+    for win in WINNING_PATTERNS:
+
+        # needs to match every bits in the WINNING_PATTERNS
+        if ((int(bin(win), 2) & int(_cross_positions, 2)) == (int(bin(win), 2))) or \
+           ((int(bin(win), 2) & int(_nought_positions, 2)) == (int(bin(win), 2))):
+            return 1
+    return 0
+
 
 PATH = './tictactoe_net.pth'
 
@@ -36,17 +98,8 @@ model.eval()
 
 USE_CUDA = torch.cuda.is_available()
 
-# initial game config
-random_player_start_turn = random.randint(CROSS, NOUGHT)
-CROSS_POSITIONS = '000000000'
-NOUGHT_POSITIONS = '000000000'
-player_turn = random_player_start_turn
-model_input = CROSS_POSITIONS + NOUGHT_POSITIONS + str(player_turn)
-next_move_probabilities = np.zeros(9)  # 9 boxes choice
-predicted_score = np.zeros(3)  # loss, draw, win
-out = [next_move_probabilities, predicted_score]
-
-while (CROSS_POSITIONS != WINNING_PATTERNS) | (NOUGHT_POSITIONS != WINNING_PATTERNS):  # game is still ON
+# while (cross_positions != WINNING_PATTERNS) | (nought_positions != WINNING_PATTERNS):
+while players_have_winning_patterns(cross_positions, nought_positions) == 0:  # game is still ON
     if USE_CUDA:
         out = model(torch.from_numpy(
             np.array([int(v) for v in model_input], dtype='float32')[np.newaxis]
@@ -61,21 +114,25 @@ while (CROSS_POSITIONS != WINNING_PATTERNS) | (NOUGHT_POSITIONS != WINNING_PATTE
     next_move_probabilities = out[0]
 
     # updates next_move
-    next_move = np.binary_repr(next_move_probabilities.argmax())
-    print("next_move = ", next_move)
+    next_move = update_move(next_move, next_move_probabilities, player_turn, cross_positions, nought_positions)
 
-    # updates CROSS_POSITIONS or NAUGHT_POSITIONS (based on next_move output from NN)
+    next_move_in_integer = int(next_move, 2)
+    print("Confirmed next_move = ", next_move_in_integer)
+
+    # updates cross_positions or NAUGHT_POSITIONS (based on next_move output from NN)
     # depending on which player turn
     if player_turn == CROSS:
-        # bitwise OR (CROSS_POSITIONS, next_move)
-        CROSS_POSITIONS = binary_to_string(int(CROSS_POSITIONS, 2) | int(next_move, 2))
+        # bitwise OR (cross_positions, next_move)
+        cross_positions = binary_to_string(int(cross_positions, 2) |
+                                           (1 << (TOTAL_NUM__OF_BOXES-next_move_in_integer-1)))
 
     else:
-        # bitwise OR (NOUGHT_POSITIONS, next_move)
-        NOUGHT_POSITIONS = binary_to_string(int(NOUGHT_POSITIONS, 2) | int(next_move, 2))
+        # bitwise OR (nought_positions, next_move)
+        nought_positions = binary_to_string(int(nought_positions, 2) |
+                                            (1 << (TOTAL_NUM__OF_BOXES-next_move_in_integer-1)))
 
-    print("CROSS_POSITIONS = ", CROSS_POSITIONS)
-    print("NAUGHT_POSITIONS = ", NOUGHT_POSITIONS)
+    print("cross_positions = ", cross_positions)
+    print("nought_positions = ", nought_positions)
 
     # flips turn for next player, use a NOT operator since there are only 2 players
     if player_turn == CROSS:
@@ -87,6 +144,7 @@ while (CROSS_POSITIONS != WINNING_PATTERNS) | (NOUGHT_POSITIONS != WINNING_PATTE
     print("player_turn = ", player_turn)
 
     # updates model_input for next player turn
-    model_input = CROSS_POSITIONS + NOUGHT_POSITIONS + str(player_turn)
+    model_input = cross_positions + nought_positions + str(player_turn)
 
     print("model_input = ", model_input)
+    print("\n")
