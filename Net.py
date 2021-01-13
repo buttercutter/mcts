@@ -16,7 +16,7 @@ SCORE_COLUMN = -1  # last column of the csv file
 NUM_OF_BOARD_FEATURES_AND_TURN = NUM_OF_BOARD_FEATURES + 1  # add 1 because of player turn
 NUM_OF_POSSIBLE_MOVES = 9  # a normal 3x3 tic-tac-toe has 9 input boxes
 NUM_OF_POSSIBLE_SCORES = 3  # -1, 0, 1 == loss, draw, win
-POSSIBLE_SCORES = [-1, 0, 1]
+# POSSIBLE_SCORES = [-1, 0, 1]
 SIZE_OF_HIDDEN_LAYERS = 512
 NUM_EPOCHS = 6000
 LEARNING_RATE = 0.7
@@ -239,7 +239,8 @@ def train():
                 print("_score_train[train_index] = ",
                       _score_train[train_index], '\n')
 
-                if predicted[train_index] == _score_train[train_index]:
+                # substract 1 because score is one of these [-1, 0, 1] values
+                if (predicted[train_index] - 1) == _score_train[train_index]:
                     print("predicted == _score_train")
                     train_correct = train_correct + 1
 
@@ -321,7 +322,8 @@ def train():
                 # print("_score_test[test_index][predicted[test_index]] = ",
                 #      _score_test[test_index][predicted[test_index]], '\n')
 
-                if _score_test[test_index] == POSSIBLE_SCORES[predicted[test_index]-1]:
+                # substract 1 because score is one of these [-1, 0, 1] values
+                if (predicted[test_index] - 1) == _score_test[test_index]:
                     # print("predicted == _score_test")
                     test_correct = test_correct + 1
 
