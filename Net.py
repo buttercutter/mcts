@@ -149,22 +149,10 @@ def train():
             # Forward Pass
             policy_output, value_output = net(_board_features_and_turn)
 
-            # Since both policy_output and value_output are of continuous probability nature,
-            # we need to change them to discrete number for loss_function() computation
-            policy_output_discrete = torch.zeros(len(_score), NUM_OF_POSSIBLE_MOVES, requires_grad=True)
-            if USE_CUDA:
-                policy_output_discrete = policy_output_discrete.cuda()
-
-            for topk_index in range(len(_score)):  # functionally equivalent to softmax()
-                policy_output_discrete[topk_index][policy_output.topk(1).indices[topk_index]] = 1
-
-            # substract 1 because score is one of these [-1, 0, 1] values
-            value_output_discrete = torch.topk(value_output, 1).indices - 1
-
             # Loss at each iteration by comparing to target(moves)
-            loss1 = loss_function(policy_output_discrete, move)
+            loss1 = loss_function(policy_output, move)
             # Loss at each iteration by comparing to target(score)
-            loss2 = loss_function(value_output_discrete, _score)
+            loss2 = loss_function(value_output, _score)
 
             loss = loss1 + loss2
 
@@ -225,6 +213,39 @@ def train():
             train_total = train_total + len(_moves_train)
 
     print('Accuracy of the network on train move: %d %%' % (
+        100 * train_correct / train_total))
+
+    train_correct = 0
+    train_total = 0
+
+    with torch.no_grad():
+        for _board_train, _moves_train, _score_train in train_loader:
+            if USE_CUDA:
+                _board_train = _board_train.cuda()
+                _moves_train = _moves_train.cuda()
+                _score_train = _score_train.cuda()
+
+            model_input = _board_train
+            _policy_output, _value_output = net(model_input)
+            predicted = torch.argmax(_value_output, 1)
+
+            print("_value_output = ", _value_output)
+            print("predicted = ", predicted)
+            print("_score_train = ", _score_train)
+
+            for train_index in range(len(_score_train)):
+                print("score testing for train_index = ", train_index)
+
+                print("_score_train[train_index] = ",
+                      _score_train[train_index], '\n')
+
+                if predicted[train_index] == _score_train[train_index]:
+                    print("predicted == _score_train")
+                    train_correct = train_correct + 1
+
+            train_total = train_total + len(_score_train)
+
+    print('Accuracy of the network on train score: %d %%' % (
         100 * train_correct / train_total))
 
     print("############################################")
