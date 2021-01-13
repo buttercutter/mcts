@@ -103,17 +103,18 @@ USE_CUDA = torch.cuda.is_available()
 # while (cross_positions != WINNING_PATTERNS) | (nought_positions != WINNING_PATTERNS):
 while players_have_winning_patterns(cross_positions, nought_positions) == 0:  # game is still ON
     if USE_CUDA:
-        out = model(torch.from_numpy(
+        out_policy, out_value = model(torch.from_numpy(
             np.array([int(v) for v in model_input], dtype='float32')[np.newaxis]
         ).cuda())
 
     else:
-        out = model(torch.from_numpy(
+        out_policy, out_value  = model(torch.from_numpy(
             np.array([int(v) for v in model_input], dtype='float32')[np.newaxis]
         ))
 
-    print(out)
-    next_move_probabilities = out[0]
+    print("out_policy = ", out_policy)
+    print("out_value = ", out_value)
+    next_move_probabilities = out_policy
 
     # updates next_move
     next_move = update_move(next_move, next_move_probabilities, player_turn, cross_positions, nought_positions)
