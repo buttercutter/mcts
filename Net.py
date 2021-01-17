@@ -8,7 +8,6 @@ import pandas as pd
 from collections import Counter
 from sklearn.model_selection import train_test_split
 
-
 TEST_DATASET_RATIO = 0.05  # 5 percent of the dataset is dedicated for testing purpose
 NUM_OF_BOARD_FEATURES = 18
 PLAYER_TURN_COLUMN = -2  # second to last column of the csv file
@@ -17,10 +16,10 @@ NUM_OF_BOARD_FEATURES_AND_TURN = NUM_OF_BOARD_FEATURES + 1  # add 1 because of p
 NUM_OF_POSSIBLE_MOVES = 9  # a normal 3x3 tic-tac-toe has 9 input boxes
 NUM_OF_POSSIBLE_SCORES = 3  # -1, 0, 1 == loss, draw, win
 # POSSIBLE_SCORES = [-1, 0, 1]
-SIZE_OF_HIDDEN_LAYERS = 512
-NUM_EPOCHS = 6000
+SIZE_OF_HIDDEN_LAYERS = 256
+NUM_EPOCHS = 1000
 LEARNING_RATE = 0.7
-MOMENTUM = 0.9
+MOMENTUM = 0.1
 
 
 class Net(nn.Module):
@@ -57,7 +56,8 @@ class Net(nn.Module):
             nn.ReLU(),
             nn.Dropout(),
 
-            nn.Linear(SIZE_OF_HIDDEN_LAYERS, NUM_OF_POSSIBLE_SCORES)
+            nn.Linear(SIZE_OF_HIDDEN_LAYERS, NUM_OF_POSSIBLE_SCORES),
+            nn.Softmax(1)
         )
 
     def forward(self, x):
@@ -93,7 +93,7 @@ def train():
 
     # Target variables are the possible move squares as well as the predicted output scores
     moves_score = df.iloc[:, list(range(NUM_OF_BOARD_FEATURES, NUM_OF_BOARD_FEATURES + NUM_OF_POSSIBLE_MOVES)) +
-                          [SCORE_COLUMN]]
+                             [SCORE_COLUMN]]
     # print(moves_score)
 
     board_train, board_test, moves_score_train, moves_score_test = \
@@ -122,10 +122,10 @@ def train():
 
     optimizer = optim.SGD(net.parameters(), lr=LEARNING_RATE, momentum=MOMENTUM)
 
-    # loss_function = nn.CrossEntropyLoss()
+    loss_function2 = nn.CrossEntropyLoss()
     loss_function = nn.MSELoss()
 
-    TRAIN_BATCH_SIZE = int(len(moves_score)*(1-TEST_DATASET_RATIO))
+    TRAIN_BATCH_SIZE = int(len(moves_score) * (1 - TEST_DATASET_RATIO))
 
     for epoch in range(NUM_EPOCHS):
         loss_ = 0
@@ -151,8 +151,11 @@ def train():
 
             # Loss at each iteration by comparing to target(moves)
             loss1 = loss_function(policy_output, move)
+
             # Loss at each iteration by comparing to target(score)
-            loss2 = loss_function(value_output, _score)
+            # adds 1 to _score because cross_entrophy loss cannot accept input value of -1
+            # https://github.com/pytorch/pytorch/issues/1204#issuecomment-292746566
+            loss2 = loss_function2(value_output, (_score + 1).squeeze(1).long())
 
             loss = loss1 + loss2
 
@@ -196,24 +199,24 @@ def train():
             _policy_output, _value_output = net(model_input)
             predicted = torch.argmax(_policy_output, 1)
 
-            print("_policy_output = ", _policy_output)
-            print("predicted = ", predicted)
-            print("_moves_train = ", _moves_train)
+            # print("_policy_output = ", _policy_output)
+            # print("predicted = ", predicted)
+            # print("_moves_train = ", _moves_train)
 
             for train_index in range(len(_moves_train)):
-                print("move testing for train_index = ", train_index)
+                # print("move testing for train_index = ", train_index)
 
-                print("_moves_train[train_index][predicted[train_index]] = ",
-                      _moves_train[train_index][predicted[train_index]], '\n')
+                # print("_moves_train[train_index][predicted[train_index]] = ",
+                #      _moves_train[train_index][predicted[train_index]], '\n')
 
                 if _moves_train[train_index][predicted[train_index]]:
-                    print("predicted == _moves_train")
+                    # print("predicted == _moves_train")
                     train_correct = train_correct + 1
 
             train_total = train_total + len(_moves_train)
 
     print('Accuracy of the network on train move: %d %%' % (
-        100 * train_correct / train_total))
+            100 * train_correct / train_total))
 
     train_correct = 0
     train_total = 0
@@ -229,32 +232,31 @@ def train():
             _policy_output, _value_output = net(model_input)
             predicted = torch.argmax(_value_output, 1)
 
-            print("_value_output = ", _value_output)
-            print("predicted = ", predicted)
-            print("_score_train = ", _score_train)
+            # print("_value_output = ", _value_output)
+            # print("predicted = ", predicted)
+            # print("_score_train = ", _score_train)
 
             for train_index in range(len(_score_train)):
-                print("score testing for train_index = ", train_index)
+                # print("score testing for train_index = ", train_index)
 
-                print("_score_train[train_index] = ",
-                      _score_train[train_index], '\n')
+                # print("_score_train[train_index] = ", _score_train[train_index], '\n')
 
                 # substract 1 because score is one of these [-1, 0, 1] values
                 if (predicted[train_index] - 1) == _score_train[train_index]:
-                    print("predicted == _score_train")
+                    # print("predicted == _score_train")
                     train_correct = train_correct + 1
 
             train_total = train_total + len(_score_train)
 
     print('Accuracy of the network on train score: %d %%' % (
-        100 * train_correct / train_total))
+            100 * train_correct / train_total))
 
     print("############################################")
     print("Doing test_accuracy check")
 
     # validate the trained NN model for both predicted recommended move
     # and its corresponding predicted score
-    TEST_BATCH_SIZE = int(len(moves_score)*TEST_DATASET_RATIO)  # 4520*0.8
+    TEST_BATCH_SIZE = int(len(moves_score) * TEST_DATASET_RATIO)  # 4520*0.8
 
     test_correct = 0
     test_total = 0
@@ -266,7 +268,7 @@ def train():
         list(test_loader),
         batch_size=TEST_BATCH_SIZE,
     )
-    print(test_loader)
+    # print(test_loader)
 
     with torch.no_grad():
         for _board_test, _moves_test, _score_test in test_loader:
@@ -296,7 +298,7 @@ def train():
             test_total = test_total + len(_moves_test)
 
     print('Accuracy of the network on test move: %d %%' % (
-        100 * test_correct / test_total))
+            100 * test_correct / test_total))
 
     test_correct = 0
     test_total = 0
@@ -330,7 +332,7 @@ def train():
             test_total = test_total + len(_score_test)
 
     print('Accuracy of the network on test score: %d %%' % (
-        100 * test_correct / test_total))
+            100 * test_correct / test_total))
 
 
 if __name__ == "__main__":
