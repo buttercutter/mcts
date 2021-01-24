@@ -10,24 +10,13 @@ from Net import Net
 
 CROSS, NOUGHT = 0, 1
 PLAYERS = [CROSS, NOUGHT]
+TOTAL_NUM__OF_BOXES = 9  # 3x3 tic-tac-toe
+
 
 # Winning patterns encoded in bit patterns.
 # E.g. three in a row in the top row is
 #   448 = 0b111000000
 WINNING_PATTERNS = [448, 56, 7, 292, 146, 73, 273, 84]  # Row  # Columns  # Diagonals
-
-
-# initial game config
-TOTAL_NUM__OF_BOXES = 9  # 3x3 tic-tac-toe
-random_player_start_turn = random.randint(CROSS, NOUGHT)
-cross_positions = '000000000'
-nought_positions = '000000000'
-player_turn = random_player_start_turn
-model_input = cross_positions + nought_positions + str(player_turn)
-next_move = 99999999999999  # just for initialization
-next_move_probabilities = np.zeros(TOTAL_NUM__OF_BOXES)  # 9 boxes choice
-predicted_score = np.zeros(3)  # loss, draw, win
-out = [next_move_probabilities, predicted_score]
 
 
 def binary_to_string(input_binary):
@@ -92,23 +81,37 @@ def players_have_winning_patterns(_cross_positions, _nought_positions):
         return 0
 
 
-PATH = './tictactoe_net.pth'
+def initialize():
+    # initial game config
+    random_player_start_turn_ = random.randint(CROSS, NOUGHT)
+    cross_positions_ = '000000000'
+    nought_positions_ = '000000000'
+    player_turn_ = random_player_start_turn_
+    model_input_ = cross_positions_ + nought_positions_ + str(player_turn_)
+    next_move_ = 99999999999999  # just for initialization
+    # next_move_probabilities = np.zeros(TOTAL_NUM__OF_BOXES)  # 9 boxes choice
+    # predicted_score = np.zeros(3)  # loss, draw, win
+    # out = [next_move_probabilities, predicted_score]
 
-# Load
-model = torch.load(PATH)
-model.eval()
+    trained_model_path = './tictactoe_net.pth'
 
-USE_CUDA = torch.cuda.is_available()
+    # Load
+    model_ = torch.load(trained_model_path)
+    model_.eval()
 
-# while (cross_positions != WINNING_PATTERNS) | (nought_positions != WINNING_PATTERNS):
-while players_have_winning_patterns(cross_positions, nought_positions) == 0:  # game is still ON
+    return cross_positions_, nought_positions_, model_, model_input_, next_move_, player_turn_
+
+
+def play(model, model_input, next_move, player_turn, cross_positions, nought_positions):
+    USE_CUDA = torch.cuda.is_available()
+
     if USE_CUDA:
         out_policy, out_value = model(torch.from_numpy(
             np.array([int(v) for v in model_input], dtype='float32')[np.newaxis]
         ).cuda())
 
     else:
-        out_policy, out_value  = model(torch.from_numpy(
+        out_policy, out_value = model(torch.from_numpy(
             np.array([int(v) for v in model_input], dtype='float32')[np.newaxis]
         ))
 
@@ -151,3 +154,26 @@ while players_have_winning_patterns(cross_positions, nought_positions) == 0:  # 
 
     print("model_input = ", model_input)
     print("\n")
+
+    return out_value, cross_positions, nought_positions
+
+
+game_is_on = 1
+num_of_play_rounds = 0
+_cross_positions, _nought_positions, _model, _model_input, __next_move, _player_turn = initialize()
+
+# while (cross_positions != WINNING_PATTERNS) | (nought_positions != WINNING_PATTERNS):
+while game_is_on:  # game is still ON
+    num_of_play_rounds = num_of_play_rounds + 1
+
+    __out_value, __cross_positions, __nought_positions \
+        = play(_model, _model_input, __next_move, _player_turn, _cross_positions, _nought_positions)
+
+    game_is_on = (players_have_winning_patterns(__cross_positions, __nought_positions) == 0)
+
+    _cross_positions = __cross_positions
+    _nought_positions = __nought_positions
+
+out_score = torch.argmax(__out_value)
+game_is_on = 0
+print("game finished")

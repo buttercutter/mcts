@@ -1,5 +1,6 @@
 import numpy as np
-import random
+from Net import Net
+import play
 import sys
 sys.setrecursionlimit(100000)  # to temporarily solve Recursion Depth Limit issue
 
@@ -71,7 +72,9 @@ class Mcts:
     # Expansion stage of MCTS
     # Insert Child Nodes for a leaf node
     def insert(self):
-        num_of_possible_game_states = 8  # assuming that we are playing tic-tac toe
+        # assuming that we are playing tic-tac toe
+        # we subtract number of game states already played from the total possible game states
+        num_of_possible_game_states = play.TOTAL_NUM__OF_BOXES - play.num_of_play_rounds
 
         for S in range(num_of_possible_game_states):
             self.nodes.append(Mcts(self))  # inserts child nodes
@@ -80,10 +83,25 @@ class Mcts:
 
     # Simulation stage of MCTS
     def simulate(self):
-        # will replace the simulation stage with a neural network in the future
-        self.win = random.randint(0, 1)  # just for testing purpose, so it is either win (1) or lose (0)
-        self.loss = ~self.win & random.randint(0, 1)  # 'and' with randn() for tie/draw situation
-        self.backpropagation(self.win, self.loss)
+        # Instantiates neural network inference coding (play.py) here
+        if play.game_is_on == 0:  # game finished with either win, lose or draw
+            # score, so it is either win (1) or draw (0) or lose (-1)
+            if play.out_score == 1:
+                print("win")
+                self.win = 1
+                self.loss = 0
+
+            if play.out_score == -1:
+                print("lose")
+                self.win = 0
+                self.loss = 1
+
+            if play.out_score == 0:
+                print("draw")
+                self.win = 0
+                self.loss = 0
+
+            self.backpropagation(self.win, self.loss)
 
     # Backpropagation stage of MCTS
     def backpropagation(self, win, loss):
