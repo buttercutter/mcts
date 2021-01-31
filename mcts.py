@@ -1,6 +1,7 @@
 import numpy as np
 from Net import Net
 import play
+
 import sys
 sys.setrecursionlimit(100000)  # to temporarily solve Recursion Depth Limit issue
 
@@ -16,8 +17,9 @@ puct_array = []  # stores puct ratio for every child nodes for argmax()
 
 # determined by PUCT formula
 def find_best_path(parent):
+    print("find_best_path()")
     if (parent == root) | (len(parent.nodes) == 0):
-        return parent
+        return 0
 
     for N in parent.nodes:
         puct_array.append(N.puct)
@@ -28,9 +30,18 @@ def find_best_path(parent):
     #  leaf node has 0 child node
     is_leaf_node = (len(parent.nodes[max_index].nodes) == 0)
     if is_leaf_node:
-        return parent.nodes[max_index]
+        return max_index
 
-    return parent.nodes[max_index]
+    else:
+        return -1
+
+
+# for play.py inference coding
+is_simulation_stage = None  # initialized to None because game had not started yet
+
+
+def is_mcts_in_simulate_stage():
+    return is_simulation_stage
 
 
 class Mcts:
@@ -48,6 +59,8 @@ class Mcts:
 
     # this function computes W/N ratio for each node
     def compute_total_win_and_visits(self, total_win=0, visits=0):
+        print("compute_total_win_and_visits()")
+
         if self.win:
             total_win = total_win + 1
 
@@ -62,16 +75,25 @@ class Mcts:
         # https://i.imgur.com/uI7NRcT.png inside each node
 
     # Selection stage of MCTS
+    # https://www.reddit.com/r/reinforcementlearning/comments/kfg6qo/selection_phase_of_montecarlo_tree_search/
     def select(self):
+        print("select()")
         # traverse recursively all the way down from the root node
         # to find the path with the highest W/N ratio (this ratio is determined using PUCT formula)
         # and then select that leaf node to do the new child nodes insertion
         leaf = find_best_path(self)  # returns a reference pointer to the desired leaf node
-        leaf.insert()  # this leaf node is selected to insert child nodes under it
+        parent_node = self
+
+        while leaf == -1:
+            parent_node = parent_node.nodes[leaf]
+            leaf = find_best_path(parent_node)  # keeps looping in case it is not the leaf yet
+
+        parent_node.insert()  # this leaf node is selected to insert child nodes under it
 
     # Expansion stage of MCTS
     # Insert Child Nodes for a leaf node
     def insert(self):
+        print("insert()")
         # assuming that we are playing tic-tac toe
         # we subtract number of game states already played from the total possible game states
         num_of_possible_game_states = play.TOTAL_NUM__OF_BOXES - play.num_of_play_rounds
@@ -79,13 +101,22 @@ class Mcts:
         for S in range(num_of_possible_game_states):
             self.nodes.append(Mcts(self))  # inserts child nodes
 
-        self.nodes[len(self.nodes) - 1].simulate()
+        self.simulate()
 
     # Simulation stage of MCTS
     def simulate(self):
+        print("simulate()")
+        best_child_node = find_best_path(self)
+
         # Instantiates neural network inference coding (play.py) here
-        if play.game_is_on == 0:  # game finished with either win, lose or draw
-            # score, so it is either win (1) or draw (0) or lose (-1)
+        play.mcts_play(is_mcts_in_simulate_stage=1, ongoing_game=play.game_is_on, best_child_node=best_child_node)
+        print("after one round of game")
+
+        if play.game_is_on == 1:  # game not yet finished
+            # predicted "intermediate" score during each step of the game,
+            # so it is either win (1) or draw (0) or lose (-1)
+            print("intermediate out_score = ", play.out_score)
+
             if play.out_score == 1:
                 print("win")
                 self.win = 1
@@ -103,8 +134,12 @@ class Mcts:
 
             self.backpropagation(self.win, self.loss)
 
+        else:  # game finished
+            print(root.print_tree(root))  # for verifying MCTS logic correctness
+
     # Backpropagation stage of MCTS
     def backpropagation(self, win, loss):
+        print("backpropagation()")
         # traverses upwards to the root node
         # and updates PUCT ratio for each parent nodes
         # computes the PUCT expression Q+U https://slides.com/crem/lc0#/9
@@ -123,7 +158,7 @@ class Mcts:
         self.puct = (total_win_for_all_child_nodes / num_of_child_visits) + \
             cfg_puct * np.sqrt(num_of_parent_visits) / (num_of_child_visits + 1)
 
-        if self.parent == root:  # already reached root node
+        if self.parent == 0:  # already reached root node
             self.select()
 
         else:
@@ -150,4 +185,3 @@ class Mcts:
 
 root = Mcts(0)  # we use parent=0 because this is the head/root node
 root.select()
-print(root.print_tree(root))

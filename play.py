@@ -102,7 +102,7 @@ def initialize():
     return cross_positions_, nought_positions_, model_, model_input_, next_move_, player_turn_
 
 
-def play(model, model_input, next_move, player_turn, cross_positions, nought_positions):
+def play(using_mcts, best_child_node, model, model_input, next_move, player_turn, cross_positions, nought_positions):
     USE_CUDA = torch.cuda.is_available()
 
     if USE_CUDA:
@@ -119,10 +119,14 @@ def play(model, model_input, next_move, player_turn, cross_positions, nought_pos
     print("out_value = ", out_value)
     next_move_probabilities = out_policy
 
-    # updates next_move
-    next_move = update_move(next_move, next_move_probabilities, player_turn, cross_positions, nought_positions)
+    if using_mcts:  # will determine next_move according to highest PUCT values of child nodes
+        next_move = best_child_node
+        next_move_in_integer = next_move
+    else:
+        # updates next_move
+        next_move = update_move(next_move, next_move_probabilities, player_turn, cross_positions, nought_positions)
+        next_move_in_integer = int(next_move, 2)
 
-    next_move_in_integer = int(next_move, 2)
     print("Confirmed next_move = ", next_move_in_integer)
 
     # updates cross_positions or NAUGHT_POSITIONS (based on next_move output from NN)
@@ -140,13 +144,6 @@ def play(model, model_input, next_move, player_turn, cross_positions, nought_pos
     print("cross_positions = ", cross_positions)
     print("nought_positions = ", nought_positions)
 
-    # flips turn for next player, use a NOT operator since there are only 2 players
-    if player_turn == CROSS:
-        player_turn = NOUGHT
-
-    else:
-        player_turn = CROSS
-
     print("player_turn = ", player_turn)
 
     # updates model_input for next player turn
@@ -158,22 +155,92 @@ def play(model, model_input, next_move, player_turn, cross_positions, nought_pos
     return out_value, cross_positions, nought_positions
 
 
-game_is_on = 1
-num_of_play_rounds = 0
-_cross_positions, _nought_positions, _model, _model_input, __next_move, _player_turn = initialize()
+if __name__ == '__main__':
 
-# while (cross_positions != WINNING_PATTERNS) | (nought_positions != WINNING_PATTERNS):
-while game_is_on:  # game is still ON
-    num_of_play_rounds = num_of_play_rounds + 1
+    print("standalone inference coding")
+    game_is_on = 1
+    num_of_play_rounds = 0
+    _cross_positions, _nought_positions, _model, _model_input, __next_move, _player_turn = initialize()
 
-    __out_value, __cross_positions, __nought_positions \
-        = play(_model, _model_input, __next_move, _player_turn, _cross_positions, _nought_positions)
+    # while (cross_positions != WINNING_PATTERNS) | (nought_positions != WINNING_PATTERNS):
+    while game_is_on:  # game is still ON
+        num_of_play_rounds = num_of_play_rounds + 1
 
-    game_is_on = (players_have_winning_patterns(__cross_positions, __nought_positions) == 0)
+        __out_value, __cross_positions, __nought_positions \
+            = play(0, 0, _model, _model_input, __next_move, _player_turn, _cross_positions, _nought_positions)
 
-    _cross_positions = __cross_positions
-    _nought_positions = __nought_positions
+        out_score = torch.argmax(__out_value)
+        game_is_on = (players_have_winning_patterns(__cross_positions, __nought_positions) == 0)
 
-out_score = torch.argmax(__out_value)
-game_is_on = 0
-print("game finished")
+        _cross_positions = __cross_positions
+        _nought_positions = __nought_positions
+
+        # switches player turn after each step
+        if _player_turn == CROSS:
+            _player_turn = NOUGHT
+
+        else:
+            _player_turn = CROSS
+
+    game_is_on = 0
+    print("game finished")
+
+else:  # executed from mcts.py
+
+    print("using mcts")
+    _cross_positions = 0
+    _nought_positions = 0
+    _model = 0
+    _model_input = 0
+    __next_move = 0
+    _player_turn = 0
+    num_of_play_rounds = 0
+    game_is_on = 0  # initialized to 0 because game has not started yet
+    out_score = 0
+
+    def mcts_play(is_mcts_in_simulate_stage=0, ongoing_game=0, best_child_node=0):
+
+        global _cross_positions
+        global _nought_positions
+        global _model
+        global _model_input
+        global __next_move
+        global _player_turn
+        global num_of_play_rounds
+        global game_is_on
+        global out_score
+
+        if is_mcts_in_simulate_stage:
+            print("is_mcts_in_simulate_stage")
+
+            if ongoing_game == 0:  # first step of the game
+                print("ongoing_game == 0")
+                game_is_on = 1
+                num_of_play_rounds = 0
+                _cross_positions, _nought_positions, _model, _model_input, __next_move, _player_turn = initialize()
+
+            print("ongoing_game == 1")
+            num_of_play_rounds = num_of_play_rounds + 1
+
+            __out_value, __cross_positions, __nought_positions \
+                = play(1, best_child_node, _model, _model_input, __next_move, _player_turn,
+                       _cross_positions, _nought_positions)
+
+            out_score = torch.argmax(__out_value)
+            game_is_on = (players_have_winning_patterns(__cross_positions, __nought_positions) == 0)
+
+            _cross_positions = __cross_positions
+            _nought_positions = __nought_positions
+
+            # switches player turn after each step
+            print("switches player turn")
+            if _player_turn == CROSS:
+                _player_turn = NOUGHT
+
+            else:
+                _player_turn = CROSS
+
+            if game_is_on == 0:
+                print("game finished")
+
+        return None
