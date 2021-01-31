@@ -9,7 +9,7 @@ from collections import Counter
 from sklearn.model_selection import train_test_split
 
 TEST_DATASET_RATIO = 0.05  # 5 percent of the dataset is dedicated for testing purpose
-NUM_OF_BOARD_FEATURES = 18
+NUM_OF_BOARD_FEATURES = 18  # Both players A and B have 9 boxes to fill
 PLAYER_TURN_COLUMN = -2  # second to last column of the csv file
 SCORE_COLUMN = -1  # last column of the csv file
 NUM_OF_BOARD_FEATURES_AND_TURN = NUM_OF_BOARD_FEATURES + 1  # add 1 because of player turn

@@ -88,7 +88,7 @@ def initialize():
     nought_positions_ = '000000000'
     player_turn_ = random_player_start_turn_
     model_input_ = cross_positions_ + nought_positions_ + str(player_turn_)
-    next_move_ = 99999999999999  # just for initialization
+    # next_move_ = 99999999999999  # just for initialization
     # next_move_probabilities = np.zeros(TOTAL_NUM__OF_BOXES)  # 9 boxes choice
     # predicted_score = np.zeros(3)  # loss, draw, win
     # out = [next_move_probabilities, predicted_score]
@@ -99,10 +99,10 @@ def initialize():
     model_ = torch.load(trained_model_path)
     model_.eval()
 
-    return cross_positions_, nought_positions_, model_, model_input_, next_move_, player_turn_
+    return cross_positions_, nought_positions_, model_, model_input_, player_turn_
 
 
-def play(using_mcts, best_child_node, model, model_input, next_move, player_turn, cross_positions, nought_positions):
+def play(using_mcts, best_child_node, model, model_input, player_turn, cross_positions, nought_positions):
     USE_CUDA = torch.cuda.is_available()
 
     if USE_CUDA:
@@ -124,6 +124,7 @@ def play(using_mcts, best_child_node, model, model_input, next_move, player_turn
         next_move_in_integer = next_move
     else:
         # updates next_move
+        next_move = torch.argmax(next_move_probabilities)
         next_move = update_move(next_move, next_move_probabilities, player_turn, cross_positions, nought_positions)
         next_move_in_integer = int(next_move, 2)
 
@@ -152,7 +153,7 @@ def play(using_mcts, best_child_node, model, model_input, next_move, player_turn
     print("model_input = ", model_input)
     print("\n")
 
-    return out_value, cross_positions, nought_positions
+    return out_value, cross_positions, nought_positions, model_input
 
 
 if __name__ == '__main__':
@@ -160,14 +161,14 @@ if __name__ == '__main__':
     print("standalone inference coding")
     game_is_on = 1
     num_of_play_rounds = 0
-    _cross_positions, _nought_positions, _model, _model_input, __next_move, _player_turn = initialize()
+    _cross_positions, _nought_positions, _model, _model_input, _player_turn = initialize()
 
     # while (cross_positions != WINNING_PATTERNS) | (nought_positions != WINNING_PATTERNS):
     while game_is_on:  # game is still ON
         num_of_play_rounds = num_of_play_rounds + 1
 
-        __out_value, __cross_positions, __nought_positions \
-            = play(0, 0, _model, _model_input, __next_move, _player_turn, _cross_positions, _nought_positions)
+        __out_value, __cross_positions, __nought_positions, _model_input \
+            = play(0, 0, _model, _model_input, _player_turn, _cross_positions, _nought_positions)
 
         out_score = torch.argmax(__out_value)
         game_is_on = (players_have_winning_patterns(__cross_positions, __nought_positions) == 0)
@@ -192,7 +193,6 @@ else:  # executed from mcts.py
     _nought_positions = 0
     _model = 0
     _model_input = 0
-    __next_move = 0
     _player_turn = 0
     num_of_play_rounds = 0
     game_is_on = 0  # initialized to 0 because game has not started yet
@@ -204,7 +204,6 @@ else:  # executed from mcts.py
         global _nought_positions
         global _model
         global _model_input
-        global __next_move
         global _player_turn
         global num_of_play_rounds
         global game_is_on
@@ -217,14 +216,13 @@ else:  # executed from mcts.py
                 print("ongoing_game == 0")
                 game_is_on = 1
                 num_of_play_rounds = 0
-                _cross_positions, _nought_positions, _model, _model_input, __next_move, _player_turn = initialize()
+                _cross_positions, _nought_positions, _model, _model_input, _player_turn = initialize()
 
             print("ongoing_game == 1")
             num_of_play_rounds = num_of_play_rounds + 1
 
-            __out_value, __cross_positions, __nought_positions \
-                = play(1, best_child_node, _model, _model_input, __next_move, _player_turn,
-                       _cross_positions, _nought_positions)
+            __out_value, __cross_positions, __nought_positions, _model_input \
+                = play(1, best_child_node, _model, _model_input, _player_turn, _cross_positions, _nought_positions)
 
             out_score = torch.argmax(__out_value)
             game_is_on = (players_have_winning_patterns(__cross_positions, __nought_positions) == 0)
