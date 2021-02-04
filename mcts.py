@@ -18,7 +18,7 @@ puct_array = []  # stores puct ratio for every child nodes for argmax()
 # determined by PUCT formula
 def find_best_path(parent):
     print("find_best_path()")
-    if (parent == root) | (len(parent.nodes) == 0):
+    if len(parent.nodes) == 0:
         return 0
 
     for N in parent.nodes:
@@ -51,7 +51,7 @@ class Mcts:
 
         self.parent = parent  # this is the parent node
         self.nodes = []  # creates an empty list with no child nodes initially
-        self.data = 0  # can be of any value, but just initialized to 0
+        # self.data = 0  # can be of any value, but just initialized to 0
         self.visit = 1  # when a node is first created, it is counted as visited once
         self.win = 0  # because no play/simulation had been performed yet
         self.loss = 0  # because no play/simulation had been performed yet
@@ -78,6 +78,9 @@ class Mcts:
     # https://www.reddit.com/r/reinforcementlearning/comments/kfg6qo/selection_phase_of_montecarlo_tree_search/
     def select(self):
         print("select()")
+        print("start printing tree for debugging purpose")
+        self.print_tree()
+        print("finished printing tree")
         # traverse recursively all the way down from the root node
         # to find the path with the highest W/N ratio (this ratio is determined using PUCT formula)
         # and then select that leaf node to do the new child nodes insertion
@@ -85,7 +88,7 @@ class Mcts:
         parent_node = self
 
         while leaf == -1:
-            parent_node = parent_node.nodes[leaf]
+            parent_node = parent_node.nodes
             leaf = find_best_path(parent_node)  # keeps looping in case it is not the leaf yet
 
         parent_node.insert()  # this leaf node is selected to insert child nodes under it
@@ -135,7 +138,7 @@ class Mcts:
             self.backpropagation(self.win, self.loss)
 
         else:  # game finished
-            print(root.print_tree(root))  # for verifying MCTS logic correctness
+            print(root.print_tree())  # for verifying MCTS logic correctness
 
     # Backpropagation stage of MCTS
     def backpropagation(self, win, loss):
@@ -176,11 +179,11 @@ class Mcts:
             self.parent.backpropagation(win, loss)
 
     # Print the Tree
-    def print_tree(self, child):
-        for x in child.nodes:
-            print(x.data)
+    def print_tree(self):
+        for x in self.nodes:
+            print(x.puct)
             if x.nodes:
-                self.print_tree(x.nodes)
+                self.print_tree()
 
 
 root = Mcts(0)  # we use parent=0 because this is the head/root node
