@@ -1,3 +1,4 @@
+import random
 import numpy as np
 from Net import Net
 import play
@@ -104,7 +105,9 @@ class Mcts:
         for S in range(num_of_possible_game_states):
             self.nodes.append(Mcts(self))  # inserts child nodes
 
-        self.simulate()
+        # selects randomly just 1 newly added child node and simulate it
+        random_child_node = random.randint(0, num_of_possible_game_states-1)
+        self.nodes[random_child_node].simulate()
 
     # Simulation stage of MCTS
     def simulate(self):
