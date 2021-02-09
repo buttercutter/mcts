@@ -121,12 +121,13 @@ def play(using_mcts, best_child_node, model, model_input, player_turn, cross_pos
 
     if using_mcts:  # will determine next_move according to highest PUCT values of child nodes
         next_move = best_child_node
-        next_move_in_integer = next_move
+
     else:
         # updates next_move
         next_move = torch.argmax(next_move_probabilities)
-        next_move = update_move(next_move, next_move_probabilities, player_turn, cross_positions, nought_positions)
-        next_move_in_integer = int(next_move, 2)
+
+    next_move = update_move(next_move, next_move_probabilities, player_turn, cross_positions, nought_positions)
+    next_move_in_integer = int(next_move, 2)
 
     print("Confirmed next_move = ", next_move_in_integer)
 
