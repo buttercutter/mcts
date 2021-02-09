@@ -106,16 +106,17 @@ class Mcts:
             self.nodes.append(Mcts(self))  # inserts child nodes
 
         # selects randomly just 1 newly added child node and simulate it
-        random_child_node = random.randint(0, num_of_possible_game_states-1)
-        self.nodes[random_child_node].simulate()
+        random_child_under_best_parent_node = random.randint(0, num_of_possible_game_states-1)
+        self.nodes[random_child_under_best_parent_node].simulate(random_child_under_best_parent_node)
 
     # Simulation stage of MCTS
-    def simulate(self):
+    def simulate(self, random_child_under_best_parent_node):
         print("simulate()")
-        best_child_node = find_best_path(self)
+        # best_child_node = find_best_path(self)
 
         # Instantiates neural network inference coding (play.py) here
-        play.mcts_play(is_mcts_in_simulate_stage=1, ongoing_game=play.game_is_on, best_child_node=best_child_node)
+        play.mcts_play(is_mcts_in_simulate_stage=1, ongoing_game=play.game_is_on,
+                       best_child_node=random_child_under_best_parent_node)
         print("after one round of game")
 
         if play.game_is_on == 1:  # game not yet finished
