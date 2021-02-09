@@ -9,17 +9,17 @@ from collections import Counter
 from sklearn.model_selection import train_test_split
 
 TEST_DATASET_RATIO = 0.05  # 5 percent of the dataset is dedicated for testing purpose
-NUM_OF_BOARD_FEATURES = 18
+NUM_OF_BOARD_FEATURES = 18  # Both players A and B have 9 boxes to fill
 PLAYER_TURN_COLUMN = -2  # second to last column of the csv file
 SCORE_COLUMN = -1  # last column of the csv file
 NUM_OF_BOARD_FEATURES_AND_TURN = NUM_OF_BOARD_FEATURES + 1  # add 1 because of player turn
 NUM_OF_POSSIBLE_MOVES = 9  # a normal 3x3 tic-tac-toe has 9 input boxes
 NUM_OF_POSSIBLE_SCORES = 3  # -1, 0, 1 == loss, draw, win
 # POSSIBLE_SCORES = [-1, 0, 1]
-SIZE_OF_HIDDEN_LAYERS = 256
-NUM_EPOCHS = 1000
+SIZE_OF_HIDDEN_LAYERS = 64
+NUM_EPOCHS = 6000
 LEARNING_RATE = 0.7
-MOMENTUM = 0.1
+MOMENTUM = 0.9
 
 
 class Net(nn.Module):
@@ -93,7 +93,7 @@ def train():
 
     # Target variables are the possible move squares as well as the predicted output scores
     moves_score = df.iloc[:, list(range(NUM_OF_BOARD_FEATURES, NUM_OF_BOARD_FEATURES + NUM_OF_POSSIBLE_MOVES)) +
-                             [SCORE_COLUMN]]
+                          [SCORE_COLUMN]]
     # print(moves_score)
 
     board_train, board_test, moves_score_train, moves_score_test = \
