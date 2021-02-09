@@ -194,12 +194,15 @@ if __name__ == '__main__':
 
         if (game_is_on == 0) & (cross_had_won == 0) & (nought_had_won == 0):
             print("game finished with draw")
+            break
 
         if cross_had_won:
             print("game finished with player CROSS being the winner")
+            break
 
         if nought_had_won:
             print("game finished with player NOUGHT being the winner")
+            break
 
         _cross_positions = __cross_positions
         _nought_positions = __nought_positions
@@ -264,9 +267,11 @@ else:  # executed from mcts.py
                 return TIE_DRAW
 
             if cross_had_won:
+                print("game finished with player CROSS being the winner")
                 return CROSS_IS_WINNER
 
             if nought_had_won:
+                print("game finished with player NOUGHT being the winner")
                 return NOUGHT_IS_WINNER
 
             _cross_positions = __cross_positions
