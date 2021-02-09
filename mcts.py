@@ -115,9 +115,13 @@ class Mcts:
         # best_child_node = find_best_path(self)
 
         # Instantiates neural network inference coding (play.py) here
-        play.mcts_play(is_mcts_in_simulate_stage=1, ongoing_game=play.game_is_on,
+        game_status = play.mcts_play(is_mcts_in_simulate_stage=1, ongoing_game=play.game_is_on,
                        best_child_node=random_child_under_best_parent_node)
-        print("after one round of game")
+        # print("after one round of game")
+
+        if game_status != play.NO_WINNING_PLAYER_YET:
+            print("game finally finished, exiting mcts tree logic")
+            exit(0)
 
         if play.game_is_on == 1:  # game not yet finished
             # predicted "intermediate" score during each step of the game,

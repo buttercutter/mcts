@@ -17,6 +17,10 @@ TOTAL_NUM__OF_BOXES = 9  # 3x3 tic-tac-toe
 # E.g. three in a row in the top row is
 #   448 = 0b111000000
 WINNING_PATTERNS = [448, 56, 7, 292, 146, 73, 273, 84]  # Row  # Columns  # Diagonals
+TIE_DRAW = 0
+CROSS_IS_WINNER = 1
+NOUGHT_IS_WINNER = 2
+NO_WINNING_PLAYER_YET = 3
 
 
 def binary_to_string(input_binary):
@@ -68,10 +72,21 @@ def update_move(_next_move, _next_move_probabilities, _player_turn, _cross_posit
     return _next_move
 
 
-def players_have_winning_patterns(_cross_positions, _nought_positions):
+def player_cross_has_winning_patterns(_cross_positions):
     # needs to match every bits in the WINNING_PATTERNS
     if any(
-            np.bitwise_and(win, int(_cross_positions, 2)) == win or
+            np.bitwise_and(win, int(_cross_positions, 2)) == win
+            for win in WINNING_PATTERNS
+    ):
+        return 1
+
+    else:
+        return 0
+
+
+def player_nought_has_winning_patterns(_nought_positions):
+    # needs to match every bits in the WINNING_PATTERNS
+    if any(
             np.bitwise_and(win, int(_nought_positions, 2)) == win
             for win in WINNING_PATTERNS
     ):
@@ -172,7 +187,19 @@ if __name__ == '__main__':
             = play(0, 0, _model, _model_input, _player_turn, _cross_positions, _nought_positions)
 
         out_score = torch.argmax(__out_value)
-        game_is_on = (players_have_winning_patterns(__cross_positions, __nought_positions) == 0)
+        game_is_on = num_of_play_rounds < TOTAL_NUM__OF_BOXES
+
+        cross_had_won = player_cross_has_winning_patterns(__cross_positions)
+        nought_had_won = player_nought_has_winning_patterns(__nought_positions)
+
+        if (game_is_on == 0) & (cross_had_won == 0) & (nought_had_won == 0):
+            print("game finished with draw")
+
+        if cross_had_won:
+            print("game finished with player CROSS being the winner")
+
+        if nought_had_won:
+            print("game finished with player NOUGHT being the winner")
 
         _cross_positions = __cross_positions
         _nought_positions = __nought_positions
@@ -221,12 +248,26 @@ else:  # executed from mcts.py
 
             print("ongoing_game == 1")
             num_of_play_rounds = num_of_play_rounds + 1
+            print("num_of_play_rounds = ", num_of_play_rounds)
 
             __out_value, __cross_positions, __nought_positions, _model_input \
                 = play(1, best_child_node, _model, _model_input, _player_turn, _cross_positions, _nought_positions)
 
             out_score = torch.argmax(__out_value)
-            game_is_on = (players_have_winning_patterns(__cross_positions, __nought_positions) == 0)
+            game_is_on = num_of_play_rounds < TOTAL_NUM__OF_BOXES
+
+            cross_had_won = player_cross_has_winning_patterns(__cross_positions)
+            nought_had_won = player_nought_has_winning_patterns(__nought_positions)
+
+            if (game_is_on == 0) & (cross_had_won == 0) & (nought_had_won == 0):
+                print("game finished with draw")
+                return TIE_DRAW
+
+            if cross_had_won:
+                return CROSS_IS_WINNER
+
+            if nought_had_won:
+                return NOUGHT_IS_WINNER
 
             _cross_positions = __cross_positions
             _nought_positions = __nought_positions
@@ -239,7 +280,4 @@ else:  # executed from mcts.py
             else:
                 _player_turn = CROSS
 
-            if game_is_on == 0:
-                print("game finished")
-
-        return None
+        return NO_WINNING_PLAYER_YET
