@@ -3,7 +3,7 @@ A simple vanilla Monte-Carlo Tree Search implementation in python
 
 TODO : 
 
-1. Attach a tic-tac-toe neural network to the MCTS in order to verify the correctness of my MCTS coding because now the tree keeps expanding without any terminal state, thus the need for some games to make sure that the tree actually gives correct winning result
+1. The MCTS logic is now using neural network as its simulation backbone engine, will consider to use Deep Q-learning method later
 
 2. Investigate the [PUCT formula](https://slides.com/crem/lc0#/9) more in-depth especially [Hoeffding’s Inequality](https://lilianweng.github.io/lil-log/2018/01/23/the-multi-armed-bandit-problem-and-its-solutions.html)
 
