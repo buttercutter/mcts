@@ -9,4 +9,4 @@ TODO :
 
 3. Review the BAI-MCTS paper : [Monte-Carlo Tree Search by Best Arm Identification](https://arxiv.org/abs/1706.02986) , and [Adversarial Bandit Environments](https://tor-lattimore.com/downloads/book/book.pdf#page=156) 
 
-Credit: Thanks to kind folks ([@crem](https://github.com/mooskagh) , [@Naphthalin](https://github.com/Naphthalin) , [@oscardssmith](https://github.com/oscardssmith)) from Leela-Zero community
+Credit: Thanks to kind folks ([@crem](https://github.com/mooskagh) , [@Naphthalin](https://github.com/Naphthalin) , [@oscardssmith](https://github.com/oscardssmith)) from Leela-Zero community , and [@Lattimore](https://github.com/tor) from DeepMind
